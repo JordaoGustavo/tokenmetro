@@ -1,0 +1,32 @@
+{
+  "name": "tokenmetro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Métricas locais de uso de agentes de IA (Claude Code, Codex, Cursor...) restritas a um único projeto.",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "setup": "node --no-warnings scripts/setup.js",
+    "sync": "node --no-warnings server/cli.js sync",
+    "export": "node --no-warnings server/cli.js export",
+    "import": "node --no-warnings server/cli.js import",
+    "log": "node --no-warnings server/cli.js log",
+    "server": "node --no-warnings server/index.js",
+    "dev": "concurrently -k -n api,web -c blue,green \"node --no-warnings --watch-path=server server/index.js\" \"vite\"",
+    "build": "vite build",
+    "start": "vite build && node --no-warnings server/index.js"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@vitejs/plugin-react": "^4.7.0",
+    "clsx": "^2.1.1",
+    "concurrently": "^9.2.0",
+    "lucide-react": "^0.525.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^3.1.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.11",
+    "vite": "^7.0.6"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "developer": "seu-nome",
+  "projectPaths": ["/Users/voce/workspace/projeto-desafio"],
+  "sources": {
+    "claude": true,
+    "codex": true,
+    "cursor": true
+  },
+  "syncIntervalSeconds": 60,
+  "port": 4317
+}
