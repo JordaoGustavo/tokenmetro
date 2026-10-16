@@ -1,13 +1,14 @@
 # tokenmetro
 
-Métricas **locais** de como cada dev usa agentes de IA (Claude Code, Codex, Cursor, Devin…) enquanto implementa **o mesmo projeto**, para depois compararmos os workflows.
+Métricas **locais** de como cada dev usa agentes de IA (Claude Code, Codex, Devin CLI, Cursor…) enquanto implementa **o mesmo projeto**, para depois compararmos os workflows.
 
 O tokenmetro **não fica no meio** das suas ferramentas. Ele lê os logs que cada agente já grava no seu computador. Depois filtra só o que aconteceu **dentro da pasta do projeto do desafio**. Usar IA em outros projetos não afeta as métricas.
 
 ```
 ~/.claude/projects/*.jsonl ┐
 ~/.codex/sessions/**.jsonl ├─► filtro por cwd == pasta do projeto ─► SQLite local ─► dashboard (localhost)
-Cursor state.vscdb         │                                              │
+Cursor state.vscdb         │
+Devin CLI sessions.db      │                                              │
 git log do projeto         ┘                                              └─► export JSON ─► comparação entre devs
 ```
 
@@ -56,7 +57,7 @@ cp tokenmetro.config.example.json tokenmetro.config.json
 {
   "developer": "maria",                                  // seu identificador na comparação
   "projectPaths": ["/Users/maria/dev/desafio-ia"],       // caminho(s) ABSOLUTO(s); subpastas também contam
-  "sources": { "claude": true, "codex": true, "cursor": true },
+  "sources": { "claude": true, "codex": true, "cursor": true, "devin": true },
   "syncIntervalSeconds": 60,                             // sync automático enquanto o servidor roda
   "port": 4317                                           // porta da API
 }
@@ -80,7 +81,7 @@ Use mais de um caminho em `projectPaths` se você usa **git worktrees** ou clone
 | `npm run sync` | Lê os logs e atualiza o banco (idempotente, pode rodar quantas vezes quiser) |
 | `npm run export` | Gera `data/exports/<dev>-<data>.json` com **suas** métricas |
 | `npm run import -- a.json b.json` | Importa exports dos colegas para comparar |
-| `npm run log -- --source devin --prompt "..." --tokens 1200` | Registro manual (ferramentas sem log local) |
+| `npm run log -- --source chatgpt --prompt "..." --tokens 1200` | Registro manual (ferramentas sem log local) |
 
 ## Comparando entre devs
 
@@ -103,9 +104,10 @@ A aba **Comparação** mostra uma coluna por dev. Reimportar um export mais novo
 | **Claude Code** | ✅ | ✅ | ✅ exato | `~/.claude/projects/` (ou `$CLAUDE_CONFIG_DIR`) |
 | **Codex CLI / IDE** | ✅ | ✅ | ✅ exato | `~/.codex/sessions/` (ou `$CODEX_HOME`) |
 | **Cursor (IDE)** | ✅ | ✅ | ⚠️ parcial | `state.vscdb` do Cursor. Versões recentes muitas vezes gravam 0 tokens. Para números exatos, veja o dashboard de uso em cursor.com |
-| **Devin / outras web** | manual | manual | manual | `npm run log`. O Devin roda na nuvem, então anote os prompts e os ACUs/tokens que o painel mostrar |
+| **Devin CLI** | ✅ | ✅ | ⚠️ não gravado | `~/.local/share/devin/cli/sessions.db` (ou `$DEVIN_DATA_DIR`). Hoje o Devin CLI não salva tokens por mensagem. Sessões, prompts, tool calls e tempo são medidos; tokens só se uma versão futura passar a gravar `num_tokens` |
+| **Outras (web)** | manual | manual | manual | `npm run log` |
 
-Caminhos fora do padrão podem ser definidos por variáveis de ambiente: `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `CURSOR_USER_DIR`, `TOKENMETRO_CONFIG`, `TOKENMETRO_DB`.
+Caminhos fora do padrão podem ser definidos por variáveis de ambiente: `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `CURSOR_USER_DIR`, `DEVIN_DATA_DIR`, `TOKENMETRO_CONFIG`, `TOKENMETRO_DB`.
 
 ## Garantias de isolamento
 
@@ -117,7 +119,7 @@ Caminhos fora do padrão podem ser definidos por variáveis de ambiente: `CLAUDE
 
 ```
 server/
-  collectors/   claude.js · codex.js · cursor.js · git.js   ← um parser por ferramenta
+  collectors/   claude.js · codex.js · cursor.js · devin.js · git.js   ← um parser por ferramenta
   sync.js       orquestra coleta + grava no SQLite (só reprocessa arquivos alterados)
   db.js         schema (sessions, prompts, commits)
   index.js      API HTTP + serve a UI

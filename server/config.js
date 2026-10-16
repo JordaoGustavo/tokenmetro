@@ -23,7 +23,7 @@ export function loadConfig() {
     port: 4317,
     syncIntervalSeconds: 60,
     ...raw,
-    sources: { claude: true, codex: true, cursor: true, ...raw.sources },
+    sources: { claude: true, codex: true, cursor: true, devin: true, ...raw.sources },
     projectPaths,
   }
 }

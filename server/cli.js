@@ -12,7 +12,7 @@ const db = openDb()
 
 if (cmd === 'sync') {
   const s = runSync(db)
-  console.log(`✔ sync: ${s.claude} sessões Claude, ${s.codex} Codex, ${s.cursor} Cursor, ${s.commits} commits`)
+  console.log(`✔ sync: ${s.claude} sessões Claude, ${s.codex} Codex, ${s.cursor} Cursor, ${s.devin} Devin, ${s.commits} commits`)
   s.errors.forEach((e) => console.warn('⚠', e))
 } else if (cmd === 'export') {
   const cfg = loadConfig()
@@ -51,7 +51,7 @@ if (cmd === 'sync') {
     console.log(`✔ importado ${data.developer}: ${data.sessions.length} sessões, ${data.prompts.length} prompts`)
   }
 } else if (cmd === 'log') {
-  // Registro manual para ferramentas sem log local (ex.: Devin, ChatGPT web).
+  // Registro manual para ferramentas sem log local (ex.: ChatGPT web).
   const { values } = parseArgs({
     args: rest,
     options: {
@@ -60,7 +60,7 @@ if (cmd === 'sync') {
     },
   })
   if (!values.source || !values.prompt) {
-    console.error('uso: npm run log -- --source devin --prompt "texto" [--session id] [--tokens N | --input N --output N] [--model x]')
+    console.error('uso: npm run log -- --source chatgpt --prompt "texto" [--session id] [--tokens N | --input N --output N] [--model x]')
     process.exit(1)
   }
   const cfg = loadConfig()

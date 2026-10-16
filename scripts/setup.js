@@ -21,7 +21,7 @@ rl.close()
 const cfg = {
   developer,
   projectPaths: [path.resolve(projectPath)],
-  sources: { claude: true, codex: true, cursor: true, ...current.sources },
+  sources: { claude: true, codex: true, cursor: true, devin: true, ...current.sources },
   syncIntervalSeconds: current.syncIntervalSeconds ?? 60,
   port: current.port ?? 4317,
 }

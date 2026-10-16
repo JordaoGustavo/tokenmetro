@@ -4,7 +4,8 @@
   "sources": {
     "claude": true,
     "codex": true,
-    "cursor": true
+    "cursor": true,
+    "devin": true
   },
   "syncIntervalSeconds": 60,
   "port": 4317

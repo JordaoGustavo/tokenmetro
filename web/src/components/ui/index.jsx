@@ -33,6 +33,7 @@ const BADGE = {
   claude: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
   codex: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
   cursor: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+  devin: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
   subagent: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
 }
 export const Badge = ({ children, className }) => (

@@ -4,6 +4,7 @@ import { tx, replaceSession, fileChanged, markFile } from './db.js'
 import * as claude from './collectors/claude.js'
 import * as codex from './collectors/codex.js'
 import * as cursor from './collectors/cursor.js'
+import * as devin from './collectors/devin.js'
 import * as git from './collectors/git.js'
 
 function save(db, developer, { session, prompts }) {
@@ -65,6 +66,10 @@ function syncCursor(db, cfg, match, stats) {
   for (const r of cursor.collect(match)) { save(db, cfg.developer, r); stats.cursor++ }
 }
 
+function syncDevin(db, cfg, match, stats) {
+  for (const r of devin.collect(match)) { save(db, cfg.developer, r); stats.devin++ }
+}
+
 function syncGit(db, cfg, stats) {
   const ins = db.prepare('INSERT OR REPLACE INTO commits (developer, sha, ts, message, additions, deletions, files_changed) VALUES (?,?,?,?,?,?,?)')
   for (const p of cfg.projectPaths) {
@@ -78,13 +83,14 @@ function syncGit(db, cfg, stats) {
 export function runSync(db) {
   const cfg = loadConfig()
   const match = makeMatcher(cfg.projectPaths)
-  const stats = { claude: 0, codex: 0, cursor: 0, commits: 0, errors: [] }
+  const stats = { claude: 0, codex: 0, cursor: 0, devin: 0, commits: 0, errors: [] }
   const step = (name, fn) => {
     try { tx(db, fn) } catch (e) { stats.errors.push(`${name}: ${e.message}`) }
   }
   if (cfg.sources.claude) step('claude', () => syncClaude(db, cfg, match, stats))
   if (cfg.sources.codex) step('codex', () => syncCodex(db, cfg, match, stats))
   if (cfg.sources.cursor) step('cursor', () => syncCursor(db, cfg, match, stats))
+  if (cfg.sources.devin) step('devin', () => syncDevin(db, cfg, match, stats))
   step('git', () => syncGit(db, cfg, stats))
   return stats
 }
