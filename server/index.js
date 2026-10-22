@@ -33,7 +33,7 @@ function where(q, alias = 'p') {
 const TOKEN_SUMS = `
   COUNT(*) AS prompts,
   COUNT(DISTINCT p.session_pk) AS sessions,
-  SUM(p.kind = 'subagent') AS subagents,
+  COUNT(DISTINCT CASE WHEN p.kind = 'subagent' THEN COALESCE(p.thread_id, p.id) END) AS subagents,
   COALESCE(SUM(p.input_tokens),0) AS input_tokens,
   COALESCE(SUM(p.cache_read_tokens),0) AS cache_read_tokens,
   COALESCE(SUM(p.cache_write_tokens),0) AS cache_write_tokens,

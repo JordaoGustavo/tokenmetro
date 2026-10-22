@@ -53,12 +53,20 @@ function syncClaude(db, cfg, match, stats) {
   }
 }
 
-function syncCodex(db, cfg, match, stats) {
-  for (const f of codex.listFiles()) {
-    if (!fileChanged(db, f)) continue
-    const r = codex.parseFile(f, match)
-    if (r) { save(db, cfg.developer, r); stats.codex++ }
-    markFile(db, f)
+export function syncCodex(db, cfg, match, stats, files = codex.listFiles()) {
+  // Re-read matching rollouts: children can change without the parent changing,
+  // and old parser cache entries must not hide sessions after an upgrade.
+  const records = codex.parseFiles(files, match)
+  for (const group of codex.groupSessions(records)) {
+    // Remove older imports where a child was incorrectly saved as a session.
+    for (const id of group.members) {
+      if (id === group.session.session_id) continue
+      const pk = `${cfg.developer}:codex:${id}`
+      db.prepare('DELETE FROM prompts WHERE session_pk = ?').run(pk)
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(pk)
+    }
+    save(db, cfg.developer, group)
+    stats.codex++
   }
 }
 

@@ -21,7 +21,7 @@ git log do projeto         ┘                                              └�
 | **Tokens por prompt** | input (sem cache), cache read, cache write, output e raciocínio, somados em todas as chamadas que o agente fez para responder aquele prompt |
 | **Tokens por sessão/dia/dev** | Totais e série temporal |
 | **Chamadas ao modelo / tool calls** | Quantas idas ao modelo e quantas ferramentas (editar arquivo, rodar comando…) cada prompt gerou |
-| **Subagentes** | Tarefas delegadas pelo Claude Code a subagentes (tokens contados na sessão-pai) |
+| **Subagentes** | Tarefas delegadas pelo Claude Code e Codex a subagentes (tokens contados na sessão-pai) |
 | **Tempo do agente** | Do envio do prompt até a última resposta |
 | **Modelo e branch** | Qual modelo foi usado e em qual branch git |
 | **Commits / linhas** | Resultado no repositório: commits, linhas +/−, **tokens por commit** |
@@ -105,7 +105,7 @@ A aba **Comparação** mostra uma coluna por dev. Reimportar um export mais novo
 | Ferramenta | Sessões | Prompts | Tokens | De onde vem |
 |---|---|---|---|---|
 | **Claude Code** | ✅ | ✅ | ✅ exato | `~/.claude/projects/` (ou `$CLAUDE_CONFIG_DIR`) |
-| **Codex CLI / IDE** | ✅ | ✅ | ✅ exato | `~/.codex/sessions/` (ou `$CODEX_HOME`) |
+| **Codex CLI / IDE** | ✅ | ✅ | ✅ conforme logs compatíveis | `~/.codex/sessions/` (ou `$CODEX_HOME`) |
 | **Cursor (IDE)** | ✅ | ✅ | ⚠️ parcial | `state.vscdb` do Cursor. Versões recentes muitas vezes gravam 0 tokens. Para números exatos, veja o dashboard de uso em cursor.com |
 | **Devin CLI** | ✅ | ✅ | ⚠️ não gravado | `~/.local/share/devin/cli/sessions.db` (ou `$DEVIN_DATA_DIR`). Hoje o Devin CLI não salva tokens por mensagem. Sessões, prompts, tool calls e tempo são medidos; tokens só se uma versão futura passar a gravar `num_tokens` |
 | **Outras (web)** | manual | manual | manual | `npm run log` |
@@ -138,3 +138,47 @@ Para adicionar uma ferramenta nova, crie `server/collectors/<nome>.js` que retor
 - **Dashboard vazio**: confirme que abriu o agente *dentro* da pasta configurada e clique em **Sync**. Compare `cwd` com `projectPaths` (caminho absoluto).
 - **`node:sqlite` não encontrado**: atualize para Node ≥ 22.5.
 - **Porta ocupada**: troque `port` na config (e o proxy em `vite.config.js`).
+
+## Integração com Codex
+
+O coletor lê os rollouts locais de `$CODEX_HOME/sessions` (por padrão,
+`~/.codex/sessions`). Não interpreta a saída de `codex exec --json` nem o
+protocolo JSON-RPC do App Server como se fossem esses arquivos.
+
+- Prompts: aceita `event_msg.user_message` e mensagens de usuário em
+  `response_item`. Usa `content_item_kinds` quando disponível para excluir
+  contexto do ambiente e instruções; em logs sem essa marcação, filtra os
+  prefixos de contexto conhecidos. Correlaciona as duas representações de cada
+  mensagem pelo texto e turno, antes da atividade do agente, e usa o evento
+  explícito de usuário para evitar duplicação, inclusive sem IDs de turno.
+- Tokens: prioriza `token_usage_record` por turno, deduplicado por `response_id`.
+  Em turnos sem esses registros, usa `event_msg.token_count.last_token_usage`,
+  deduplicando eventos com o mesmo total acumulado. Eventos contendo apenas
+  limites de uso não são chamadas ao modelo.
+- Cache: separa leitura e escrita do input; raciocínio é um subconjunto do output
+  e não é somado novamente. Totais refletem tokens registrados, não preço monetário.
+- Subagentes: segue `parent_thread_id`, inclusive em delegações aninhadas, e
+  agrega o consumo na sessão raiz. Os registros preservam `thread_id`,
+  `parent_thread_id`, `turn_id` e `root_turn_id`. A quantidade de subagentes usa
+  threads distintas. Texto criptografado da tarefa recebe uma indicação de
+  indisponibilidade, sem tentar reconstruí-lo.
+- A contagem de prompts inclui registros de tarefas de subagentes. A duração
+  acumulada soma os intervalos dos registros, podendo sobrepor trabalhos paralelos;
+  não representa tempo de CPU nem tempo exclusivo da sessão.
+- Cada sincronização relê os rollouts dos projetos configurados, incluindo filhos
+  alterados sem mudança no arquivo principal e arquivos ignorados pelo coletor
+  anterior. Logs fora desses projetos são descartados após os metadados iniciais.
+- Históricos paginados resolvem `history_base` pelo arquivo de origem e pelo limite
+  de eventos herdados. Páginas e ramificações da mesma thread são reunidas sem
+  recontar consumo ou ferramentas herdados. Bases ausentes, incompletas, cíclicas
+  ou de outra sessão interrompem a sincronização, preservando o banco anterior.
+- Prompts legados com imagem, mesmo sem texto ou `content_item_kinds`, recebem
+  uma indicação de entrada sem texto. Continuações `goal.internal_context` são
+  vinculadas ao prompt anterior reconhecido, sem criar um novo prompt de usuário.
+- Consumo sem prompt reconhecido, vínculo de pai ausente e formatos de consumo
+  incompatíveis geram erro de sincronização. O dashboard informa o erro e mantém
+  os dados anteriores; `npm run sync` retorna código de saída diferente de zero.
+
+Validado com logs locais do Codex **0.163.0** e testes de compatibilidade do
+formato legado. Os logs internos podem mudar: compatibilidade com versões futuras
+precisa ser verificada. Rode `npm test` para os testes de regressão.
