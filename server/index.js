@@ -4,6 +4,7 @@ import path from 'node:path'
 import { openDb } from './db.js'
 import { loadConfig, ROOT } from './config.js'
 import { runSync } from './sync.js'
+import { exportReport } from './export.js'
 
 const cfg = loadConfig()
 const db = openDb()
@@ -53,6 +54,7 @@ const routes = {
     lastSync,
   }),
   'POST /api/sync': () => doSync(),
+  'POST /api/export': () => { doSync(); return exportReport(db, cfg) },
 
   'GET /api/summary': (q) => {
     const w = where(q)
@@ -98,12 +100,12 @@ const routes = {
 const DIST = path.join(ROOT, 'dist')
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' }
 
-http.createServer((req, res) => {
+http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x')
   const route = routes[`${req.method} ${url.pathname}`]
   if (route) {
     try {
-      const body = JSON.stringify(route(url.searchParams))
+      const body = JSON.stringify(await route(url.searchParams))
       res.writeHead(200, { 'content-type': 'application/json' }).end(body)
     } catch (e) {
       console.error(e)

@@ -3,9 +3,10 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { parseArgs } from 'node:util'
 import { openDb, tx, replaceSession, SESSION_COLS, PROMPT_COLS } from './db.js'
-import { loadConfig, ROOT } from './config.js'
+import { loadConfig } from './config.js'
 import { runSync } from './sync.js'
 import { newPrompt } from './collectors/util.js'
+import { exportReport } from './export.js'
 
 const [cmd, ...rest] = process.argv.slice(2)
 const db = openDb()
@@ -18,20 +19,8 @@ if (cmd === 'sync') {
 } else if (cmd === 'export') {
   const cfg = loadConfig()
   runSync(db)
-  const dev = cfg.developer
-  const data = {
-    format: 'tokenmetro/v1',
-    exported_at: new Date().toISOString(),
-    developer: dev,
-    sessions: db.prepare('SELECT * FROM sessions WHERE developer = ?').all(dev),
-    prompts: db.prepare('SELECT * FROM prompts WHERE developer = ?').all(dev),
-    commits: db.prepare('SELECT * FROM commits WHERE developer = ?').all(dev),
-  }
-  const dir = path.join(ROOT, 'data', 'exports')
-  fs.mkdirSync(dir, { recursive: true })
-  const out = rest[0] || path.join(dir, `${dev}-${data.exported_at.slice(0, 10)}.json`)
-  fs.writeFileSync(out, JSON.stringify(data, null, 2))
-  console.log(`✔ exportado: ${out} (${data.sessions.length} sessões, ${data.prompts.length} prompts)`)
+  const r = await exportReport(db, cfg, rest[0])
+  console.log(`✔ exportado: ${r.html}\n             ${r.json} (${r.sessions} sessões, ${r.prompts} prompts)`)
 } else if (cmd === 'import') {
   if (!rest.length) { console.error('uso: npm run import -- <arquivo.json> [...]'); process.exit(1) }
   for (const file of rest) {

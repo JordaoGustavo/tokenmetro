@@ -32,6 +32,7 @@ export function openDb(dbPath = DB_PATH) {
       kind TEXT NOT NULL DEFAULT 'user', -- user | subagent | manual
       ts TEXT NOT NULL,
       text TEXT,
+      response TEXT,                       -- texto respondido pelo modelo
       model TEXT,
       input_tokens INTEGER DEFAULT 0,      -- input não cacheado
       cache_read_tokens INTEGER DEFAULT 0,
@@ -62,7 +63,7 @@ export function openDb(dbPath = DB_PATH) {
     );
   `)
   const promptColumns = new Set(db.prepare('PRAGMA table_info(prompts)').all().map((c) => c.name))
-  for (const column of ['thread_id', 'parent_thread_id', 'turn_id', 'root_turn_id']) {
+  for (const column of ['response', 'thread_id', 'parent_thread_id', 'turn_id', 'root_turn_id']) {
     if (!promptColumns.has(column)) db.exec(`ALTER TABLE prompts ADD COLUMN ${column} TEXT`)
   }
   return db
@@ -74,7 +75,7 @@ export function tx(db, fn) {
 }
 
 const SESSION_COLS = ['id', 'developer', 'source', 'session_id', 'project_path', 'cwd', 'git_branch', 'model', 'started_at', 'ended_at', 'source_file']
-const PROMPT_COLS = ['id', 'session_pk', 'developer', 'source', 'seq', 'kind', 'ts', 'text', 'model', 'input_tokens', 'cache_read_tokens', 'cache_write_tokens', 'output_tokens', 'reasoning_tokens', 'total_tokens', 'model_calls', 'tool_calls', 'duration_ms', 'thread_id', 'parent_thread_id', 'turn_id', 'root_turn_id']
+const PROMPT_COLS = ['id', 'session_pk', 'developer', 'source', 'seq', 'kind', 'ts', 'text', 'response', 'model', 'input_tokens', 'cache_read_tokens', 'cache_write_tokens', 'output_tokens', 'reasoning_tokens', 'total_tokens', 'model_calls', 'tool_calls', 'duration_ms', 'thread_id', 'parent_thread_id', 'turn_id', 'root_turn_id']
 
 const upsertSql = (table, cols) =>
   `INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`

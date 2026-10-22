@@ -3,3 +3,5 @@ dist
 data/*.db*
 data/exports
 tokenmetro.config.json
+data/.static-build
+.DS_Store
