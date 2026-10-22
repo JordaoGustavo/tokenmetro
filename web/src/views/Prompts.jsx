@@ -4,6 +4,7 @@ import { api, fmt, fmtDate, fmtDuration } from '../lib/utils'
 
 export function PromptRow({ p }) {
   const [expanded, setExpanded] = useState(false)
+  const [showReply, setShowReply] = useState(false)
   const long = p.text?.length > 400
   return (
     <div className="rounded-lg border bg-card p-3">
@@ -19,6 +20,14 @@ export function PromptRow({ p }) {
       </div>
       <pre className="whitespace-pre-wrap break-words font-sans text-sm">{long && !expanded ? p.text.slice(0, 400) + '…' : p.text}</pre>
       {long && <button className="mt-1 text-xs text-muted-foreground underline cursor-pointer" onClick={() => setExpanded(!expanded)}>{expanded ? 'menos' : 'ver tudo'}</button>}
+      {p.response && (
+        <div className="mt-2 border-t pt-2">
+          <button className="text-xs text-muted-foreground underline cursor-pointer" onClick={() => setShowReply(!showReply)}>
+            {showReply ? 'ocultar resposta' : 'ver resposta'}
+          </button>
+          {showReply && <pre className="mt-2 max-h-[32rem] overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted p-3 font-sans text-sm">{p.response}</pre>}
+        </div>
+      )}
     </div>
   )
 }

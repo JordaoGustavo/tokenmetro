@@ -25,6 +25,18 @@ function promptText(entry) {
   }
   if (!text?.trim()) return null
   if (NOISE.some((n) => text.trimStart().startsWith(n))) return null
+  // slash commands (/clear, /skill args) chegam como XML: <command-name>/x</command-name>...
+  const cmd = text.match(/<command-name>\s*(.*?)\s*<\/command-name>/s)
+  if (cmd) {
+    const args = text.match(/<command-args>([\s\S]*?)<\/command-args>/)?.[1].trim()
+    return args ? `${cmd[1]} ${args}` : cmd[1]
+  }
+  // Notificação de tarefa em background (subagente/bash terminou) — injetada pelo harness, não digitada.
+  if (text.trimStart().startsWith('<task-notification>')) {
+    const summary = text.match(/<summary>([\s\S]*?)<\/summary>/)?.[1].trim()
+    const status = text.match(/<status>([\s\S]*?)<\/status>/)?.[1].trim()
+    return { text: summary || `task ${status ?? 'notification'}`, kind: 'notification' }
+  }
   return text
 }
 
@@ -73,14 +85,18 @@ export function parseFile(file, match) {
         ? (current ? null : (typeof e.message?.content === 'string' ? e.message.content : e.message?.content?.find?.((b) => b.type === 'text')?.text))
         : promptText(e)
       if (text) {
-        current = newPrompt({ seq: prompts.length, ts: e.timestamp, text, kind: isSubagent ? 'subagent' : 'user' })
+        const kind = isSubagent ? 'subagent' : (text.kind ?? 'user')
+        current = newPrompt({ seq: prompts.length, ts: e.timestamp, text: text.text ?? text, kind })
         prompts.push(current)
       }
       continue
     }
 
     const m = e.message
-    if (!current || !m?.usage) continue
+    if (!current) continue
+    const reply = Array.isArray(m?.content) ? m.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim() : ''
+    if (reply) current.response = current.response ? `${current.response}\n\n${reply}` : reply
+    if (!m?.usage) continue
     const u = m.usage
     const prev = seenMsg.get(m.id)
     const target = prev?.prompt ?? current
