@@ -61,6 +61,12 @@ export default function App() {
 
       <main className="mx-auto max-w-7xl space-y-6 px-6 py-6">
         {error && <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">{error}</div>}
+        {!!meta?.lastSync?.errors?.length && (
+          <div role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">
+            <p>A última sincronização teve erros. Os dados podem estar desatualizados.</p>
+            {meta.lastSync.errors.map((message, i) => <p key={i} className="mt-2 break-words">{message}</p>)}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <Tabs value={tab} onChange={setTab} items={[['overview', 'Visão geral'], ['compare', 'Comparação'], ['sessions', 'Sessões'], ['prompts', 'Prompts']]} />
           <div className="ml-auto flex flex-wrap gap-2">

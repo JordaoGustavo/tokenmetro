@@ -14,6 +14,7 @@ if (cmd === 'sync') {
   const s = runSync(db)
   console.log(`✔ sync: ${s.claude} sessões Claude, ${s.codex} Codex, ${s.cursor} Cursor, ${s.devin} Devin, ${s.commits} commits`)
   s.errors.forEach((e) => console.warn('⚠', e))
+  if (s.errors.length) process.exitCode = 1
 } else if (cmd === 'export') {
   const cfg = loadConfig()
   runSync(db)

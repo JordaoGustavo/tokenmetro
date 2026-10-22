@@ -1,11 +1,35 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { StringDecoder } from 'node:string_decoder'
 
 export function* readJsonl(file) {
-  const content = fs.readFileSync(file, 'utf8')
-  for (const line of content.split('\n')) {
-    if (!line.trim()) continue
-    try { yield JSON.parse(line) } catch {}
+  const fd = fs.openSync(file, 'r')
+  const buffer = Buffer.alloc(64 * 1024)
+  const decoder = new StringDecoder('utf8')
+  let fragments = []
+  try {
+    let bytes
+    while ((bytes = fs.readSync(fd, buffer, 0, buffer.length, null)) > 0) {
+      const chunk = decoder.write(buffer.subarray(0, bytes))
+      let start = 0
+      let end
+      while ((end = chunk.indexOf('\n', start)) !== -1) {
+        fragments.push(chunk.slice(start, end))
+        const line = fragments.join('')
+        fragments = []
+        start = end + 1
+        if (!line.trim()) continue
+        try { yield JSON.parse(line) } catch {}
+      }
+      if (start < chunk.length) fragments.push(chunk.slice(start))
+    }
+    fragments.push(decoder.end())
+    const pending = fragments.join('')
+    if (pending.trim()) {
+      try { yield JSON.parse(pending) } catch {}
+    }
+  } finally {
+    fs.closeSync(fd)
   }
 }
 
