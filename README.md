@@ -79,23 +79,26 @@ Use mais de um caminho em `projectPaths` se você usa **git worktrees** ou clone
 | `npm run dev` | API (porta 4317) + UI com hot reload (porta 5173) |
 | `npm start` | Builda a UI e serve tudo em http://localhost:4317 |
 | `npm run sync` | Lê os logs e atualiza o banco (idempotente, pode rodar quantas vezes quiser) |
-| `npm run export` | Gera `data/exports/<dev>-<data>.json` com **suas** métricas |
+| `npm run export [pasta]` | Gera `<dev>.json` + `<dev>.html` com **suas** métricas (padrão: `<projeto>/docs/tokenmetro/`) |
 | `npm run import -- a.json b.json` | Importa exports dos colegas para comparar |
 | `npm run log -- --source chatgpt --prompt "..." --tokens 1200` | Registro manual (ferramentas sem log local) |
 
 ## Comparando entre devs
 
-Cada pessoa roda tudo localmente. No fim (ou em checkpoints combinados):
+Cada pessoa roda tudo localmente. No fim (ou em checkpoints combinados), clique em **Exportar** no dashboard (ou rode `npm run export`). São gerados dois arquivos em `<projeto>/docs/tokenmetro/` (configurável via `"exportDir"` no `tokenmetro.config.json`):
+
+- **`<dev>.html`**: cópia do dashboard com os dados embutidos. Abre com duplo clique, sem server e sem instalar nada. Tem um botão **JSON** que baixa os dados para importar.
+- **`<dev>.json`**: para importar no tokenmetro de quem for comparar.
+
+Commite os dois no repo do projeto e quem quiser comparar roda:
 
 ```bash
-npm run export                        # cada dev gera seu arquivo
-# compartilhem os .json (Slack, drive, PR em um repo de resultados…)
-npm run import -- data/exports/*.json # alguém importa todos
+npm run import -- ../projeto/docs/tokenmetro/*.json
 ```
 
 A aba **Comparação** mostra uma coluna por dev. Reimportar um export mais novo da mesma pessoa **substitui** o anterior, sem duplicar.
 
-> ⚠️ O export contém **o texto dos seus prompts**. Revise antes de compartilhar se tiver colado segredos, tokens ou dados sensíveis.
+> ⚠️ O export contém **o texto dos seus prompts e as respostas do modelo**. Revise antes de compartilhar se tiver colado segredos, tokens ou dados sensíveis.
 
 ## Suporte por ferramenta
 

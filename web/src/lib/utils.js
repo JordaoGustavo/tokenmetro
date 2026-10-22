@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { createStaticApi } from './static-api'
 
 export const cn = (...inputs) => twMerge(clsx(inputs))
 
@@ -18,7 +19,12 @@ export const fmtDuration = (ms) => {
 
 export const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—')
 
+// HTML exportado: os dados vêm embutidos na página e a API roda em memória.
+export const STATIC_DATA = typeof window !== 'undefined' ? window.__TOKENMETRO_DATA__ ?? null : null
+const staticApi = STATIC_DATA && createStaticApi(STATIC_DATA)
+
 export async function api(path, params = {}) {
+  if (staticApi) return staticApi(path, params)
   const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()
   const res = await fetch(`/api/${path}${qs ? `?${qs}` : ''}`)
   if (!res.ok) throw new Error((await res.json()).error)
