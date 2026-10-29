@@ -79,7 +79,7 @@ Use mais de um caminho em `projectPaths` se você usa **git worktrees** ou clone
 | `npm run dev` | API (porta 4317) + UI com hot reload (porta 5173) |
 | `npm start` | Builda a UI e serve tudo em http://localhost:4317 |
 | `npm run sync` | Lê os logs e atualiza o banco (idempotente, pode rodar quantas vezes quiser) |
-| `npm run export [pasta]` | Gera `<dev>.json` + `<dev>.html` com **suas** métricas (padrão: `<projeto>/docs/tokenmetro/`) |
+| `npm run export -- [pasta] [--agent claude\|codex\|devin\|copilot\|none]` | Gera `<dev>.json` + `<dev>.html` com **suas** métricas (padrão: `<projeto>/docs/tokenmetro/`) |
 | `npm run import -- a.json b.json` | Importa exports dos colegas para comparar |
 | `npm run log -- --source chatgpt --prompt "..." --tokens 1200` | Registro manual (ferramentas sem log local) |
 
@@ -95,6 +95,12 @@ Commite os dois no repo do projeto e quem quiser comparar roda:
 ```bash
 npm run import -- ../projeto/docs/tokenmetro/*.json
 ```
+
+### Modo apresentação
+
+O **Exportar** também monta uma linha do tempo do dev, com um slide por dia. Cada slide traz o que foi entregue, um taquímetro de tokens, o número de interações, tool calls e commits, e os prompts de destaque. Ao exportar, você escolhe qual agente escreve o resumo de cada dia: **Claude Code**, **Codex**, **Devin** ou **GitHub Copilot** (só aparecem habilitados os que estão instalados), ou **Sem IA**, que usa só as mensagens de commit. Na linha de comando: `npm run export -- --agent codex`; sem `--agent`, ele pergunta. O modelo pode ser fixado por agente com `"storyModel": { "codex": "gpt-5" }` (padrão do Claude: `haiku`). As chamadas rodam fora do projeto, então não entram nas métricas, e ficam em cache em `data/story-cache.json`.
+
+Abra pelo botão **Apresentar** (no dashboard ou no `<dev>.html`) ou com `#present` na URL. Navegue com ← → ou espaço; Esc fecha.
 
 A aba **Comparação** mostra uma coluna por dev. Reimportar um export mais novo da mesma pessoa **substitui** o anterior, sem duplicar.
 

@@ -99,10 +99,14 @@ export function createStaticApi(data) {
         .sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''))
         .slice(0, 500),
 
+    story: () => data.story ?? null,
+    ignored: () => [],
+
     prompts: (q) => {
       const needle = q.q?.toLowerCase()
       return filterRows(prompts, q)
         .filter((p) => (!q.session || p.session_pk === q.session) && (!needle || p.text?.toLowerCase().includes(needle)))
+        .filter((p) => !q.ref || p.text?.includes(q.ref) || p.response?.includes(q.ref))
         .sort((a, b) => (q.session ? a.ts.localeCompare(b.ts) : b.ts.localeCompare(a.ts)))
         .slice(0, Number(q.limit || 500))
     },

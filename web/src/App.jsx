@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Activity, Download, Moon, RefreshCw, Share2, Sun } from 'lucide-react'
+import { Activity, Download, Moon, Presentation, RefreshCw, Share2, Sun } from 'lucide-react'
 import { Button, Select, Input, Tabs } from './components/ui'
 import { api, fmtDate, STATIC_DATA } from './lib/utils'
 import Overview from './views/Overview'
 import Compare from './views/Compare'
 import Sessions from './views/Sessions'
 import Prompts from './views/Prompts'
+import Present from './views/Present'
 
 export default function App() {
   const [meta, setMeta] = useState(null)
@@ -17,6 +18,7 @@ export default function App() {
   const [notice, setNotice] = useState(null)
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
   const [error, setError] = useState(null)
+  const [presenting, setPresenting] = useState(() => location.hash === '#present')
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -38,14 +40,18 @@ export default function App() {
     setSyncing(false)
     setVersion((v) => v + 1)
   }
-  const exportReport = async () => {
+  const [agents, setAgents] = useState(null)
+  // Exportar pergunta qual CLI de agente resume os slides.
+  const pickAgent = async () => setAgents(agents ? null : await api('agents'))
+  const exportReport = async (agent) => {
+    setAgents(null)
     setExporting(true)
     setError(null)
     try {
-      const res = await fetch('/api/export', { method: 'POST' })
+      const res = await fetch(`/api/export?agent=${agent}`, { method: 'POST' })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error)
-      setNotice(`Exportado: ${body.html} e ${body.json} (${body.prompts} prompts)`)
+      setNotice(`Exportado: ${body.html} e ${body.json} (${body.prompts} prompts, ${body.days} slides)`)
       setVersion((v) => v + 1)
     } catch (e) {
       setError(`Falha no export: ${e.message}`)
@@ -66,6 +72,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
+      {presenting && <Present onClose={() => setPresenting(false)} />}
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-6 py-3">
           <div className="flex items-center gap-2 font-semibold">
@@ -90,11 +97,28 @@ export default function App() {
                 <Button variant="outline" onClick={sync} disabled={syncing}>
                   <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} /> Sync
                 </Button>
-                <Button variant="outline" onClick={exportReport} disabled={exporting} title="Gera HTML + JSON para o time">
-                  <Share2 className={`size-4 ${exporting ? 'animate-pulse' : ''}`} /> Exportar
-                </Button>
+                <div className="relative">
+                  <Button variant="outline" onClick={pickAgent} disabled={exporting} title="Gera HTML + JSON + slides para o time">
+                    <Share2 className={`size-4 ${exporting ? 'animate-pulse' : ''}`} /> {exporting ? 'Exportando…' : 'Exportar'}
+                  </Button>
+                  {agents && (
+                    <div className="absolute right-0 top-11 z-20 w-64 rounded-lg border bg-card p-2 shadow-lg">
+                      <div className="px-2 pb-2 text-xs text-muted-foreground">Qual agente resume os slides?</div>
+                      {[...agents, { id: 'none', label: 'Sem IA (só commits)', available: true }].map((a) => (
+                        <button key={a.id} disabled={!a.available} onClick={() => exportReport(a.id)}
+                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40">
+                          {a.label}
+                          {!a.available && <span className="text-xs text-muted-foreground">não instalado</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             )}
+            <Button variant="outline" onClick={() => setPresenting(true)} title="Linha do tempo em slides (gerada no Exportar)">
+              <Presentation className="size-4" /> Apresentar
+            </Button>
             <Button variant="ghost" onClick={() => setDark(!dark)} aria-label="tema">
               {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </Button>

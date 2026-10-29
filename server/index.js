@@ -5,6 +5,7 @@ import { openDb } from './db.js'
 import { loadConfig, ROOT } from './config.js'
 import { runSync } from './sync.js'
 import { exportReport } from './export.js'
+import { storyPath, availableAgents } from './story.js'
 
 const cfg = loadConfig()
 const db = openDb()
@@ -54,7 +55,29 @@ const routes = {
     lastSync,
   }),
   'POST /api/sync': () => doSync(),
-  'POST /api/export': () => { doSync(); return exportReport(db, cfg) },
+  'POST /api/export': (q) => { doSync(); return exportReport(db, cfg, { agent: q.get('agent') || 'claude' }) },
+  'GET /api/agents': () => availableAgents(),
+  // Última apresentação gerada pelo Exportar (null se nunca exportou).
+  'GET /api/story': () => {
+    try { return JSON.parse(fs.readFileSync(storyPath(cfg.developer), 'utf8')) } catch { return null }
+  },
+
+  // Ocultar um prompt que não faz parte do projeto (sai de métricas, export e slides).
+  'POST /api/prompts/ignore': (q) => {
+    db.prepare('INSERT OR IGNORE INTO ignored_prompts (id, session_pk, ts, text) SELECT id, session_pk, ts, text FROM prompts WHERE id = ?').run(q.get('id'))
+    db.prepare('DELETE FROM prompts WHERE id = ?').run(q.get('id'))
+    return { ok: true }
+  },
+  'POST /api/prompts/restore': (q) => {
+    const row = db.prepare('SELECT session_pk FROM ignored_prompts WHERE id = ?').get(q.get('id'))
+    db.prepare('DELETE FROM ignored_prompts WHERE id = ?').run(q.get('id'))
+    // Força reler o arquivo da sessão no próximo sync para o prompt voltar.
+    const file = row && db.prepare('SELECT source_file FROM sessions WHERE id = ?').get(row.session_pk)?.source_file
+    if (file) db.prepare('DELETE FROM files WHERE path = ?').run(file)
+    doSync()
+    return { ok: true }
+  },
+  'GET /api/ignored': () => db.prepare('SELECT * FROM ignored_prompts ORDER BY ts').all(),
 
   'GET /api/summary': (q) => {
     const w = where(q)
@@ -91,6 +114,8 @@ const routes = {
     const args = [...w.args]
     if (q.get('session')) { conds.push('p.session_pk = ?'); args.push(q.get('session')) }
     if (q.get('q')) { conds.push('p.text LIKE ?'); args.push(`%${q.get('q')}%`) }
+    // ref: prompts que citam um arquivo no texto ou na resposta (liga sessões de um handoff).
+    if (q.get('ref')) { conds.push('(p.text LIKE ? OR p.response LIKE ?)'); args.push(`%${q.get('ref')}%`, `%${q.get('ref')}%`) }
     const order = q.get('session') ? 'p.ts ASC' : 'p.ts DESC'
     return db.prepare(`SELECT p.* FROM prompts p ${conds.length ? 'WHERE ' + conds.join(' AND ') : ''} ORDER BY ${order} LIMIT ?`)
       .all(...args, Number(q.get('limit') || 500))

@@ -92,5 +92,6 @@ export function runSync(db) {
   if (cfg.sources.cursor) step('cursor', () => syncCursor(db, cfg, match, stats))
   if (cfg.sources.devin) step('devin', () => syncDevin(db, cfg, match, stats))
   step('git', () => syncGit(db, cfg, stats))
+  db.exec('DELETE FROM prompts WHERE id IN (SELECT id FROM ignored_prompts)')
   return stats
 }
