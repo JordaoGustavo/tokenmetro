@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { ROOT } from './config.js'
+import { buildStory, storyPath } from './story.js'
 
 const BUILD_DIR = path.join(ROOT, 'data', '.static-build')
 
@@ -65,12 +66,14 @@ export async function renderHtml(data, cfg) {
 }
 
 // Gera <dev>.json (para `import`) e <dev>.html (visualização standalone, sem server).
-export async function exportReport(db, cfg, dir = defaultExportDir(cfg)) {
+export async function exportReport(db, cfg, { dir = defaultExportDir(cfg), agent } = {}) {
   const data = exportData(db, cfg)
+  data.story = await buildStory(data, cfg, agent)
+  fs.writeFileSync(storyPath(data.developer), JSON.stringify(data.story))
   fs.mkdirSync(dir, { recursive: true })
   const json = path.join(dir, `${data.developer}.json`)
   const html = path.join(dir, `${data.developer}.html`)
   fs.writeFileSync(json, JSON.stringify(data, null, 2))
   fs.writeFileSync(html, await renderHtml(data, cfg))
-  return { json, html, sessions: data.sessions.length, prompts: data.prompts.length }
+  return { json, html, sessions: data.sessions.length, prompts: data.prompts.length, days: data.story.days.length }
 }

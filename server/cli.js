@@ -7,6 +7,8 @@ import { loadConfig } from './config.js'
 import { runSync } from './sync.js'
 import { newPrompt } from './collectors/util.js'
 import { exportReport } from './export.js'
+import { AGENTS, availableAgents } from './story.js'
+import readline from 'node:readline/promises'
 
 const [cmd, ...rest] = process.argv.slice(2)
 const db = openDb()
@@ -19,7 +21,21 @@ if (cmd === 'sync') {
 } else if (cmd === 'export') {
   const cfg = loadConfig()
   runSync(db)
-  const r = await exportReport(db, cfg, rest[0])
+  const { values, positionals } = parseArgs({ args: rest, options: { agent: { type: 'string' } }, allowPositionals: true })
+  let agent = values.agent
+  if (!agent) {
+    // Pergunta qual CLI escreve o resumo dos slides.
+    const opts = [...availableAgents().filter((a) => a.available), { id: 'none', label: 'Sem IA (só commits)' }]
+    if (process.stdin.isTTY) {
+      opts.forEach((a, i) => console.log(`  ${i + 1}) ${a.label}`))
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+      const n = Number(await rl.question(`Qual agente resume os slides? [1-${opts.length}] `)) || 1
+      rl.close()
+      agent = opts[n - 1]?.id ?? opts[0].id
+    } else agent = opts[0].id
+  }
+  if (agent !== 'none' && !AGENTS[agent]) { console.error(`✖ agente inválido: ${agent} (use ${Object.keys(AGENTS).join(' | ')} | none)`); process.exit(1) }
+  const r = await exportReport(db, cfg, { dir: positionals[0], agent })
   console.log(`✔ exportado: ${r.html}\n             ${r.json} (${r.sessions} sessões, ${r.prompts} prompts)`)
 } else if (cmd === 'import') {
   if (!rest.length) { console.error('uso: npm run import -- <arquivo.json> [...]'); process.exit(1) }
@@ -72,5 +88,5 @@ if (cmd === 'sync') {
   })
   console.log(`✔ prompt registrado em ${pk}`)
 } else {
-  console.log('comandos: sync | export [arquivo] | import <arquivos...> | log --source X --prompt "..."')
+  console.log('comandos: sync | export [pasta] [--agent claude|codex|devin|copilot|none] | import <arquivos...> | log --source X --prompt "..."')
 }

@@ -56,6 +56,13 @@ export function openDb(dbPath = DB_PATH) {
       files_changed INTEGER DEFAULT 0,
       PRIMARY KEY (developer, sha)
     );
+    -- Prompts que o dev marcou como fora do projeto: são apagados a cada sync.
+    CREATE TABLE IF NOT EXISTS ignored_prompts (
+      id TEXT PRIMARY KEY,
+      session_pk TEXT,
+      ts TEXT,
+      text TEXT
+    );
     CREATE TABLE IF NOT EXISTS files (
       path TEXT PRIMARY KEY,
       mtime_ms REAL,

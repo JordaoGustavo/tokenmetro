@@ -31,3 +31,16 @@
 
 body { @apply bg-background text-foreground antialiased; }
 * { @apply border-border; }
+
+/* Animações do modo apresentação. --d = atraso escalonado de cada elemento. */
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@keyframes grow { from { transform: scaleX(0); } }
+@keyframes grow-y { from { transform: scaleY(0); } }
+@keyframes blink { 50% { opacity: 0; } }
+.anim-rise { animation: rise .6s cubic-bezier(.2,.7,.2,1) var(--d, 0ms) both; }
+.anim-grow { transform-origin: left; animation: grow 1s cubic-bezier(.2,.7,.2,1) var(--d, 0ms) both; }
+.anim-grow-y { transform-origin: bottom; animation: grow-y .9s cubic-bezier(.2,.7,.2,1) var(--d, 0ms) both; }
+.caret { animation: blink 1s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise, .anim-grow, .anim-grow-y, .caret { animation: none; }
+}
