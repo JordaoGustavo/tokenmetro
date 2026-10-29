@@ -5,3 +5,4 @@ data/exports
 tokenmetro.config.json
 data/.static-build
 .DS_Store
+data/story-*.json
